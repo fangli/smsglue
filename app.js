@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const log = require('npmlog');
+const port = 2777;
 
 var SMSglue = require('./smsglue');
 
@@ -195,4 +196,7 @@ app.get('*', (req, res) => {
   res.redirect('/');
 });
 
-module.exports = app;
+
+app.listen(port, () => {
+  console.log(`App listening on port ${port}`)
+})

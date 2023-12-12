@@ -78,24 +78,24 @@ SMSglue.clear = function(type, id, cb = function(){}) {
 SMSglue.load('key', 'key', (err, key) => {
   SMSglue.KEY = key;
   if (err) {
-    SMSglue.KEY = require('randomstring').generate();
+    SMSglue.KEY = crypto.randomBytes(32);
     SMSglue.save('key', 'key', SMSglue.KEY);
   }
 });
-SMSglue.ALGO = 'aes192';
+SMSglue.ALGO = 'aes-256-cbc';
+
+SMSglue.IV = new Buffer.from(crypto.randomBytes(16));
 
 SMSglue.encrypt = function(text, salt=false) {
-  var key = (salt) ? SMSglue.KEY+salt : SMSglue.KEY;
-  var cipher = crypto.createCipher(SMSglue.ALGO, key);
+  var cipher = crypto.createCipheriv(SMSglue.ALGO, SMSglue.KEY, SMSglue.IV);
   var crypted = cipher.update(JSON.stringify(text), 'utf8', 'hex');
   crypted += cipher.final('hex');
   return crypted;
 }
 
 SMSglue.decrypt = function(text, salt=false) {
-  var key = (salt) ? SMSglue.KEY+salt : SMSglue.KEY;
   try {
-    var decipher = crypto.createDecipher(SMSglue.ALGO, key);
+    var decipher = crypto.createDecipheriv(SMSglue.ALGO, SMSglue.KEY, SMSglue.IV);
     var decrypted = decipher.update(text, 'hex', 'utf8')
     decrypted += decipher.final('utf8');
     return JSON.parse(decrypted);
