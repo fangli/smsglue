@@ -42,10 +42,10 @@ function SMSglue(token, origin = '') {
     provision: `${this.origin}/provision/${this.id}`,
 
     // Acrobits calls this URL to send us the push token and app id (needed for notifications)
-    report: `${this.origin}/report/${this.id}/%pushToken%/%pushappid%`,
+    report: `${this.origin}/report/${this.id}/%selector%/%pushToken%/%pushappid%`,
 
     // This URL is added to voip.ms to be called whenever a new SMS is received (it deletes the local cache of SMSs)
-    notify: `${this.origin}/notify/${this.id}`,
+    notify: `${this.origin}/notify/${this.id}?from={FROM}&message={MESSAGE}`,
 
     // Acrobits refresh the list of SMSs with this URL whenever the app is opened or a notification is received
     fetch: `${this.origin}/fetch/${this.token}/%last_known_sms_id%`,
@@ -121,7 +121,7 @@ SMSglue.parseBody = function(body) {
 } 
 
 // Send notification messages to all devices under this account
-SMSglue.notify = function(id, cb) {
+SMSglue.notify = function(id, query, cb) {
 
   // Read the cached push token and app id
   SMSglue.load('devices', id, (err, encrypted) => {
@@ -156,14 +156,17 @@ SMSglue.notify = function(id, cb) {
 
       request({
         method: 'POST',
-        url: 'https://pnm.cloudsoftphone.com/pnm2',
-        form: {
+        url: 'https://pnm.cloudsoftphone.com/pnm2/send',
+        json: {
           verb: 'NotifyTextMessage',
           AppId: device.AppId,
-          DeviceToken: device.DeviceToken
+          DeviceToken: device.DeviceToken,
+          Selector: device.Selector,
+          Badge: 1,
+          UserName: query.from,
+          Sound: 'default',
+          Message: query.message,
         }
-
-      // On complete, add 1 to the sent counter, flag if there was an error (or add valid device if not) and call function above
       }, (error) => {
         sent++;
         if (error) hasError = true;

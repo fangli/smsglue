@@ -79,7 +79,7 @@ app.get('/notify/:id', (req, res) => {
   SMSglue.clear('messages', req.params.id, (err) => {
     log.info('Action', 'notify', 'Cleared cached messages');
     // Send push notification to device(s) 
-    SMSglue.notify(req.params.id, () => {
+    SMSglue.notify(req.params.id, req.query, () => {
       log.info('Action', 'notify', 'Done push notification');
       // voip.ms expects this reply, otherwise it'll retry every 30 minutes
       res.setHeader('Content-Type', 'text/plain');
@@ -90,7 +90,7 @@ app.get('/notify/:id', (req, res) => {
 });
 
 
-app.get('/report/:id/:device/:app', (req, res) => {
+app.get('/report/:id/:selector/:device/:app', (req, res) => {
   log.info('Action', 'report');
 
   // Read existing devices file
@@ -101,7 +101,8 @@ app.get('/report/:id/:device/:app', (req, res) => {
     if ((req.params.device) && (req.params.app)) {
       devices.push({
         DeviceToken: req.params.device,
-        AppId: req.params.app
+        AppId: req.params.app,
+        Selector: req.params.selector
       });
     }
 
