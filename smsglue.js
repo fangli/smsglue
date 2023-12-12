@@ -129,17 +129,17 @@ SMSglue.notify = function(id, cb) {
     // Decrypt and prep
     var sent = 0, hasError = false, validDevices = [];
     var devices = SMSglue.decrypt(encrypted) || [];
-
+    log.info('notify', `devices count: ${devices.length}`);
     // No devices to notify, hit the callback now
     if (!devices.length) cb();
 
     // This will be called after each request, but only do anything after the final request
     var updateCachedDevices = function() {
-      // log.info('updateCachedDevices', `sent count: ${sent}`);
+      log.info('updateCachedDevices', `sent count: ${sent}`);
       
       // If number of messages sent matches the number of devices...
       if (sent >= devices.length) {
-        // log.info('updateCachedDevices', 'sent matches device length');
+        log.info('updateCachedDevices', 'sent matches device length');
 
         // If there was a push error, rewrite the devices file with on the valid devices
         if (hasError) {

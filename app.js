@@ -77,10 +77,10 @@ app.get('/notify/:id', (req, res) => {
   
   // Deleted the cached history
   SMSglue.clear('messages', req.params.id, (err) => {
-
+    log.info('Action', 'notify', 'Cleared cached messages');
     // Send push notification to device(s) 
     SMSglue.notify(req.params.id, () => {
-    
+      log.info('Action', 'notify', 'Done push notification');
       // voip.ms expects this reply, otherwise it'll retry every 30 minutes
       res.setHeader('Content-Type', 'text/plain');
       res.send('ok');
