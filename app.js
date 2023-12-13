@@ -29,11 +29,9 @@ app.post('/enable', (req, res) => {
   glue.enable( (err, r, body) => {
 
     if (body = SMSglue.parseBody(body)) {
-      // log.info('Action', body);
 
       SMSglue.save('provisions', glue.id, SMSglue.encrypt(glue.accountXML()), () => {
 
-        // Auto-empty this xml file (only "<account></account>") after 10 minutes of waiting...
         if (TIMER[glue.id]) clearTimeout(TIMER[glue.id]);
         TIMER[glue.id] = setTimeout(() => {
           SMSglue.save('provisions', glue.id, SMSglue.encrypt('<account></account>'));
@@ -59,7 +57,6 @@ app.get('/provision/:id', (req, res) => {
   SMSglue.load('provisions', req.params.id, (err, encrypted) => {
     var xml = SMSglue.decrypt(encrypted) || '<account></account>';
 
-    // If the file exists, empty this xml file (only "<account></account>") 
     if (!err) {
       if (TIMER[req.params.id]) clearTimeout(TIMER[req.params.id]);
       SMSglue.save('provisions', req.params.id, SMSglue.encrypt('<account></account>'));
@@ -75,13 +72,10 @@ app.get('/provision/:id', (req, res) => {
 app.get('/notify/:id', (req, res) => {
   log.info('Action', 'notify');
   
-  // Deleted the cached history
   SMSglue.clear('messages', req.params.id, (err) => {
     log.info('Action', 'notify', 'Cleared cached messages');
-    // Send push notification to device(s) 
     SMSglue.notify(req.params.id, req.query, () => {
       log.info('Action', 'notify', 'Done push notification');
-      // voip.ms expects this reply, otherwise it'll retry every 30 minutes
       res.setHeader('Content-Type', 'text/plain');
       res.send('ok');
 
@@ -92,12 +86,9 @@ app.get('/notify/:id', (req, res) => {
 
 app.get('/report/:id/:selector/:device/:app', (req, res) => {
   log.info('Action', 'report');
-
-  // Read existing devices file
   SMSglue.load('devices', req.params.id, (err, encrypted) => {
     var devices = SMSglue.decrypt(encrypted) || [];
 
-    // Add this push token & app id to the array
     if ((req.params.device) && (req.params.app)) {
       devices.push({
         DeviceToken: req.params.device,
@@ -106,10 +97,8 @@ app.get('/report/:id/:selector/:device/:app', (req, res) => {
       });
     }
 
-    // Remove any duplicates
     devices = devices.filter((device, index, self) => self.findIndex((d) => {return d.DeviceToken === device.DeviceToken }) === index)
 
-    // Save changes to disk
     SMSglue.save('devices', req.params.id, SMSglue.encrypt(devices), (err) => {
       res.setHeader('Content-Type', 'application/json');
       res.send({ response: { error: 0, description: 'Success' }});
@@ -126,9 +115,6 @@ app.get(['/fetch/:token/:last_sms','/fetch/:token'], (req, res) => {
   var glue = new SMSglue(req.params.token);
   var last_sms = Number(req.params.last_sms) || 0;
 
-  // log.info('last_sms', last_sms);
-
-  // Fetch filtered SMS messages back as JSON
   var fetchFilteredSMS = function(smss) {
     res.setHeader('Content-Type', 'application/json');
     res.send({
@@ -137,24 +123,17 @@ app.get(['/fetch/:token/:last_sms','/fetch/:token'], (req, res) => {
     });
   }
 
-  // First try to read the cached messages
   SMSglue.load('messages', glue.id, (err, data) => {
 
-    // Decrypt the messages and send them back
     var smss = SMSglue.decrypt(data, glue.pass) || [];
     if (smss.length) {
-      // log.info(glue.did, 'Found SMS cache')
       fetchFilteredSMS(smss);
 
-    // If the array is empty, update the cache from voip.ms and try again
     } else {
-      // log.info(glue.did, 'DID NOT find SMS cache')
       glue.get((error) => {
 
-        // Read the cached messages one more time
         SMSglue.load('messages', glue.id, (err, data) => {
 
-          // Decrypt the messages and send them back (last chance)
           smss = SMSglue.decrypt(data, glue.pass) || [];
           fetchFilteredSMS(smss);
 
