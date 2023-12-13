@@ -136,7 +136,7 @@ app.get('*', (req, res) => {
 });
 
 
-require('http').createServer(app)
-  .listen(port, () => {
-    console.log(`App listening on port ${port}`)
-  })
+app.set('env', 'production');
+app.listen(port, () => {
+  console.log(`App listening on port ${port}`)
+})
