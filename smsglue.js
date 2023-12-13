@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const moment = require('moment');
 const momenttz = require('moment-timezone');
 const request = require('request');
+const { json } = require('body-parser');
 
 function SMSglue(token, origin = '') {
   this.token = token;
@@ -30,7 +31,7 @@ function SMSglue(token, origin = '') {
 
   this.hooks = {
     provision: `${this.origin}/provision/${this.id}`,
-    report: `${this.origin}/report/${this.id}/%selector%/%pushToken%/%pushappid%`,
+    report: `${this.origin}/device/${this.id}/%selector%/%pushToken%/%pushappid%`,
     notify: `${this.origin}/notify/${this.id}?from={FROM}&message={MESSAGE}`,
     fetch: `${this.origin}/fetch/${this.token}/%last_known_sms_id%`,
     send: `${this.origin}/send/${this.token}/%sms_to%/%sms_body%`
@@ -40,12 +41,15 @@ function SMSglue(token, origin = '') {
 
 SMSglue.save = function(type, id, value, cb = function(){}) {
   var filename = path.resolve('cache', type, id);
-  fs.writeFile(filename, value, 'utf8', cb);
+  fs.writeFile(filename, JSON.stringify(value), 'utf8', cb);
 }
 
 SMSglue.load = function(type, id, cb = function(){}) {
   var filename = path.resolve('cache', type, id);
-  fs.readFile(filename, 'utf8', cb);
+  fs.readFile(filename, 'utf8', function(err, data) {
+    data = (err) ? false : JSON.parse(data);
+    cb(err, data);
+  });
 }
 
 SMSglue.clear = function(type, id, cb = function(){}) {
@@ -53,25 +57,27 @@ SMSglue.clear = function(type, id, cb = function(){}) {
   fs.unlink(filename, cb);
 }
 
-SMSglue.load('key', 'key', (err, key) => {
-  SMSglue.KEY = key;
+SMSglue.load('ciphers', 'secrets', (err, secrets) => {
   if (err) {
-    SMSglue.KEY = crypto.randomBytes(32);
-    SMSglue.save('key', 'key', SMSglue.KEY);
+    SMSglue.ALGO = 'aes-128-cbc';
+    SMSglue.KEY = crypto.randomBytes(16);
+    SMSglue.IV = crypto.randomBytes(16);
+    SMSglue.save('ciphers', 'secrets', {'algo': SMSglue.ALGO, 'key': SMSglue.KEY.toString('hex'), 'iv': SMSglue.IV.toString('hex')});
+  } else {
+    SMSglue.ALGO = secrets.algo;
+    SMSglue.KEY = Buffer.from(secrets.key, 'hex');
+    SMSglue.IV = Buffer.from(secrets.iv, 'hex');
   }
 });
-SMSglue.ALGO = 'aes-256-cbc';
 
-SMSglue.IV = new Buffer.from(crypto.randomBytes(16));
-
-SMSglue.encrypt = function(text, salt=false) {
+SMSglue.encrypt = function(text) {
   var cipher = crypto.createCipheriv(SMSglue.ALGO, SMSglue.KEY, SMSglue.IV);
   var crypted = cipher.update(JSON.stringify(text), 'utf8', 'hex');
   crypted += cipher.final('hex');
   return crypted;
 }
 
-SMSglue.decrypt = function(text, salt=false) {
+SMSglue.decrypt = function(text) {
   try {
     var decipher = crypto.createDecipheriv(SMSglue.ALGO, SMSglue.KEY, SMSglue.IV);
     var decrypted = decipher.update(text, 'hex', 'utf8')
@@ -101,14 +107,13 @@ SMSglue.notify = function(id, query, cb) {
   SMSglue.load('devices', id, (err, encrypted) => {
     var sent = 0, hasError = false, validDevices = [];
     var devices = SMSglue.decrypt(encrypted) || [];
-    log.info('notify', `devices count: ${devices.length}`);
-    // No devices to notify, hit the callback now
-    if (!devices.length) cb();
+    if (!devices.length) {
+      info.warn('NewSMS', `Received message "${query.message}" from ${query.from}, but devices found!`);
+      cb();
+    }
 
     var updateCachedDevices = function() {
-      log.info('updateCachedDevices', `sent count: ${sent}`);
       if (sent >= devices.length) {
-        log.info('updateCachedDevices', 'sent matches device length');
         if (hasError) {
           SMSglue.save('devices', id, SMSglue.encrypt(validDevices));
         }
@@ -132,8 +137,11 @@ SMSglue.notify = function(id, query, cb) {
         }
       }, (error) => {
         sent++;
-        if (error) hasError = true;
-        else validDevices.push(device);
+        if (error) {
+          hasError = true;
+        } else {
+          validDevices.push(device);
+        }
         updateCachedDevices();
       });
     });
@@ -159,8 +167,8 @@ SMSglue.prototype.request = function(query = {}, callback) {
 }
 
 
-// Enable SMS messages in voip.ms account and set SMS URL Callback
-SMSglue.prototype.enable = function(cb) {
+// Activate SMS messages in voip.ms account and set SMS URL Callback
+SMSglue.prototype.activate = function(cb) {
   var URL =  this.hooks.notify;
   this.request({ 
     method: 'setSMS',
