@@ -9,6 +9,8 @@ var app = require('express')();
 var bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+Object.defineProperty(log, 'heading', { get: () => { return new Date().toUTCString() } });
+log.headingStyle = { bg: '', fg: 'white' };
 
 app.post('/activate', (req, res) => {
   log.info('activating', req.body.user, req.body.did);
@@ -138,5 +140,5 @@ app.get('*', (req, res) => {
 
 app.set('env', 'production');
 app.listen(port, () => {
-  console.log(`App listening on port ${port}`)
+  log.info(`App listening on port ${port}`)
 })

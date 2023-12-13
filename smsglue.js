@@ -1,12 +1,9 @@
-const os = require('os');
 const fs = require('fs');
 const path = require('path')
-const log = require('npmlog');
 const crypto = require('crypto');
 const moment = require('moment');
 const momenttz = require('moment-timezone');
 const request = require('request');
-const { json } = require('body-parser');
 
 function SMSglue(token, origin = '') {
   this.token = token;
@@ -226,7 +223,7 @@ SMSglue.prototype.get = function(cb) {
           sms_text: sms.message
         }
       });
-      SMSglue.save('messages', this.id, SMSglue.encrypt(smss, this.pass), cb);
+      SMSglue.save('messages', this.id, SMSglue.encrypt(smss), cb);
     } else {
       cb(true);
     }
