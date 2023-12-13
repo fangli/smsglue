@@ -12,7 +12,7 @@ app.use(bodyParser.json());
 Object.defineProperty(log, 'heading', { get: () => { return new Date().toUTCString() } });
 log.headingStyle = { bg: '', fg: 'white' };
 
-app.post('/activate', (req, res) => {
+app.post('/sms/activate', (req, res) => {
   log.info('activating', req.body.user, req.body.did);
   let token = req.body.did.substring(6) + '-' + 
     SMSglue.encrypt({
@@ -39,7 +39,7 @@ app.post('/activate', (req, res) => {
 });
 
 
-app.get('/provision/:id', (req, res) => {
+app.get('/sms/provision/:id', (req, res) => {
   SMSglue.load('provisions', req.params.id, (err, encrypted) => {
     var xml = SMSglue.decrypt(encrypted) || '<account></account>';
     log.info('provision', req.params.id);
@@ -49,7 +49,7 @@ app.get('/provision/:id', (req, res) => {
 });
 
 
-app.get('/notify/:id', (req, res) => {
+app.get('/sms/notify/:id', (req, res) => {
   SMSglue.clear('messages', req.params.id, (err) => {
     SMSglue.notify(req.params.id, req.query, () => {
       log.info('notify', req.params.id, `Send notification for SMS from ${req.query.from}`);
@@ -60,7 +60,7 @@ app.get('/notify/:id', (req, res) => {
 });
 
 
-app.get('/device/:id/:selector/:device/:app', (req, res) => {
+app.get('/sms/device/:id/:selector/:device/:app', (req, res) => {
   SMSglue.load('devices', req.params.id, (err, encrypted) => {
     var devices = SMSglue.decrypt(encrypted) || [];
     if ((req.params.device) && (req.params.app) && (req.params.selector)) {
@@ -80,7 +80,7 @@ app.get('/device/:id/:selector/:device/:app', (req, res) => {
 });
 
 
-app.get(['/fetch/:token/:last_sms','/fetch/:token'], (req, res) => {
+app.get(['/sms/fetch/:token/:last_sms','/fetch/:token'], (req, res) => {
   var glue = new SMSglue(req.params.token);
   var last_sms = Number(req.params.last_sms) || 0;
 
@@ -109,7 +109,7 @@ app.get(['/fetch/:token/:last_sms','/fetch/:token'], (req, res) => {
   });   
 });
 
-app.get('/send/:token/:dst/:msg', (req, res) => {
+app.get('/sms/send/:token/:dst/:msg', (req, res) => {
   let glue = new SMSglue(req.params.token);
   glue.send(req.params.dst, req.params.msg, (err, r, body) => {
     body = SMSglue.parseBody(body);
@@ -125,7 +125,7 @@ app.get('/send/:token/:dst/:msg', (req, res) => {
   });
 });
 
-app.get('/', (req, res) => {
+app.get('/sms', (req, res) => {
   fs.readFile(path.resolve(__dirname, 'index.html'), 'utf8', (err, data) => {
     data = (process.env.BEFORE_CLOSING_BODY_TAG) ? data.replace("</body>", `${process.env.BEFORE_CLOSING_BODY_TAG}\n</body>`) : data;
     res.setHeader('Content-Type', 'text/html');

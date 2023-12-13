@@ -27,11 +27,11 @@ function SMSglue(token, origin = '') {
   this.valid = ((this.user.toString().includes('@')) && (this.pass.toString().length >= 8) && (this.did.toString().length == 10)) ? true : false;
 
   this.hooks = {
-    provision: `${this.origin}/provision/${this.id}`,
-    report: `${this.origin}/device/${this.id}/%selector%/%pushToken%/%pushappid%`,
-    notify: `${this.origin}/notify/${this.id}?from={FROM}&message={MESSAGE}`,
-    fetch: `${this.origin}/fetch/${this.token}/%last_known_sms_id%`,
-    send: `${this.origin}/send/${this.token}/%sms_to%/%sms_body%`
+    provision: `${this.origin}/sms/provision/${this.id}`,
+    report: `${this.origin}/sms/device/${this.id}/%selector%/%pushToken%/%pushappid%`,
+    notify: `${this.origin}/sms/notify/${this.id}?from={FROM}&message={MESSAGE}`,
+    fetch: `${this.origin}/sms/fetch/${this.token}/%last_known_sms_id%`,
+    send: `${this.origin}/sms/send/${this.token}/%sms_to%/%sms_body%`
   }
 }
 
