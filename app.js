@@ -24,6 +24,7 @@ app.post('/sms/activate', (req, res) => {
   let glue = new SMSglue(token, req.body.origin);
 
   glue.activate((err, r, body) => {
+    ori_body = "" + body;
     if (body = SMSglue.parseBody(body)) {
       SMSglue.save('provisions', glue.id, SMSglue.encrypt(glue.accountXML()), () => {
         log.info('activated', req.body.user, req.body.did);
@@ -31,7 +32,8 @@ app.post('/sms/activate', (req, res) => {
         res.send({ response: { error: 0, description: 'Success', hooks: glue.hooks }});
       });
     } else {
-        log.info('Failed Activation', req.body.user, req.body.did);
+        log.warn('Failed Activation', req.body.user, req.body.did);
+        log.warn('Failed Activation', ori_body);
         res.setHeader('Content-Type', 'application/json');
       res.send({ response: { error: 400, description: 'Invalid parameters' }});
     }
@@ -80,7 +82,7 @@ app.get('/sms/device/:id/:selector/:device/:app', (req, res) => {
 });
 
 
-app.get(['/sms/fetch/:token/:last_sms','/fetch/:token'], (req, res) => {
+app.get(['/sms/fetch/:token/:last_sms','/sms/fetch/:token'], (req, res) => {
   var glue = new SMSglue(req.params.token);
   var last_sms = Number(req.params.last_sms) || 0;
 
