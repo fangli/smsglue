@@ -127,6 +127,24 @@ app.get('/sms/send/:token/:dst/:msg', (req, res) => {
   });
 });
 
+// This is for SMS Forwarder App on Android
+// https://sipis.cloudsyn.com/sms/send/xxxx-xxx/234567890?msg=Hello
+app.get('/sms/send/:token/:dst', (req, res) => {
+  let glue = new SMSglue(req.params.token);
+  glue.send(req.params.dst, req.query.msg, (err, r, body) => {
+    body = SMSglue.parseBody(body);
+    if ((body) && (!err)) {
+      log.info('sendSMS', glue.id, `Sent SMS to ${req.params.dst}`);
+      res.setHeader('Content-Type', 'application/json');
+      res.send({ response: { error: 0, description: 'Success' }});
+    } else {
+      log.info('sendSMS', glue.id, `Failed to send SMS to ${req.params.dst}`);
+      res.setHeader('Content-Type', 'application/json');
+      res.send({ response: { error: 400, description: 'Invalid parameters' }});
+    }
+  });
+});
+
 app.get('/sms', (req, res) => {
   fs.readFile(path.resolve(__dirname, 'index.html'), 'utf8', (err, data) => {
     data = (process.env.BEFORE_CLOSING_BODY_TAG) ? data.replace("</body>", `${process.env.BEFORE_CLOSING_BODY_TAG}\n</body>`) : data;
