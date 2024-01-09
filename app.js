@@ -129,9 +129,9 @@ app.get('/sms/send/:token/:dst/:msg', (req, res) => {
 
 // This is for SMS Forwarder App on Android
 // https://sipis.cloudsyn.com/sms/send/xxxx-xxx/234567890?msg=Hello
-app.get('/sms/send/:token/:dst', (req, res) => {
+app.post('/sms/send/:token/:dst', (req, res) => {
   let glue = new SMSglue(req.params.token);
-  glue.send(req.params.dst, req.query.msg, (err, r, body) => {
+  glue.send(req.params.dst, req.body.msg, (err, r, body) => {
     body = SMSglue.parseBody(body);
     if ((body) && (!err)) {
       log.info('sendSMS', glue.id, `Sent SMS to ${req.params.dst}`);
