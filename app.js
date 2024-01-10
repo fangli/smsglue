@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const log = require('npmlog');
 const port = 2777;
+const twilio = require('twilio');
 
 var SMSglue = require('./smsglue');
 
@@ -128,21 +129,22 @@ app.get('/sms/send/:token/:dst/:msg', (req, res) => {
 });
 
 // This is for SMS Forwarder App on Android
-// https://sipis.cloudsyn.com/sms/send/xxxx-xxx/234567890?msg=Hello
-app.post('/sms/send/:token/:dst', (req, res) => {
-  let glue = new SMSglue(req.params.token);
-  glue.send(req.params.dst, req.body.msg, (err, r, body) => {
-    body = SMSglue.parseBody(body);
-    if ((body) && (!err)) {
-      log.info('sendSMS', glue.id, `Sent SMS to ${req.params.dst}`);
-      res.setHeader('Content-Type', 'application/json');
-      res.send({ response: { error: 0, description: 'Success' }});
-    } else {
-      log.info('sendSMS', glue.id, `Failed to send SMS to ${req.params.dst}`);
-      res.setHeader('Content-Type', 'application/json');
-      res.send({ response: { error: 400, description: 'Invalid parameters' }});
-    }
-  });
+// This API uses twilio's API
+// POST to https://xxx/sms/send/account_sid/auth_token/from/to
+// with body: msg=hello world
+app.post('/sms/send/:sid/:token/:from/:dst', (req, res) => {
+  let client = twilio(req.params.sid, req.params.token);
+  client.messages
+      .create({
+         body: req.body.msg,
+         from: '+1' + req.params.from,
+         to: '+1' + req.params.dst
+       })
+      .then(message => {
+        log.info('sendSMS', message.sid, `Sent SMS to ${req.params.dst}`);
+        res.setHeader('Content-Type', 'application/json');
+        res.send({ response: { error: 0, description: 'Success' }});
+      });
 });
 
 app.get('/sms', (req, res) => {
